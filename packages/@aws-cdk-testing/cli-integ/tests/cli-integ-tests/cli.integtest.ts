@@ -1213,6 +1213,39 @@ integTest('test resource import', withDefaultFixture(async (fixture) => {
   }
 }));
 
+integTest('test migrate deployment for app with localfile source in migrate.json', withDefaultFixture(async (fixture) => {
+  const outputsFile = path.join(fixture.integTestDir, 'outputs', 'outputs.json');
+  await fs.mkdir(path.dirname(outputsFile), { recursive: true });
+
+  // Initial deploy
+  await fixture.cdkDeploy('importable-stack', {
+    modEnv: { ORPHAN_TOPIC: '1' },
+    options: ['--outputs-file', outputsFile],
+  });
+
+  const outputs = JSON.parse((await fs.readFile(outputsFile, { encoding: 'utf-8' })).toString());
+  const queueName = outputs.QueueName;
+  const queueLogicalId = outputs.QueueLogicalId;
+  fixture.log(`Setup complete, created queue ${queueName}`);
+
+  // Write the migrate file based on the ID from step one, then deploy the app with migrate
+  const migrateFile = path.join(fixture.integTestDir, 'migrate.json');
+  await fs.writeFile(
+    migrateFile, JSON.stringify(
+      { Source: 'localfile', Resources: [{ ResourceType: 'AWS::SQS::Queue', LogicalResourceId: queueLogicalId, ResourceIdentifier: { QueueName: queueName } }] },
+    ),
+    { encoding: 'utf-8' },
+  );
+
+  // Create new stack from existing queue
+  try {
+    await fixture.cdkDeploy('migrate-stack');
+  } finally {
+    // Cleanup
+    await fixture.cdkDestroy('importable-stack');
+  }
+}));
+
 integTest('hotswap deployment supports Lambda function\'s description and environment variables', withDefaultFixture(async (fixture) => {
   // GIVEN
   const stackArn = await fixture.cdkDeploy('lambda-hotswap', {
