@@ -1,5 +1,4 @@
-// The SDK is only used to reference `DescribeChangeSetOutput`, so the SDK is added as a devDependency.
-// The SDK should not make network calls here
+// Must keep @aws-sdk/client-cloudformation as a dependency to ensure construct libraries work properly
 import type { DescribeChangeSetOutput as DescribeChangeSet } from '@aws-sdk/client-cloudformation';
 import * as impl from './diff';
 import * as types from './diff/types';
